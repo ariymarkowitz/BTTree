@@ -1,6 +1,3 @@
-// TODO: In this file, matrices act via right multiplication.
-// However, in Magma multiplication seems to be done on the left.
-
 /**
 * Utilities
 */
@@ -26,7 +23,7 @@ intrinsic IsMultiple(v::ModTupFldElt, w::ModTupFldElt) -> BoolElt
   return v[2]*w[1] eq v[1]*w[2];
 end intrinsic;
 
-intrinsic MinValuation(A::AlgMatElt[FldPad]) -> RngIntEl
+intrinsic MinValuation(A::AlgMatElt[FldPad]) -> RngIntElt
 { Get the minimum valuation of a matrix over a p-adic field }
   return Min([Valuation(a) : a in ElementToSequence(A)]);
 end intrinsic;
@@ -37,7 +34,7 @@ intrinsic VertexNormalForm(A::AlgMatElt[FldPad]) -> AlgMatElt[FldPad]
   p := UniformizingElement(K);
   n := MinValuation(A);
   B := ChangeRing(A * p^(-n), Integers(K));
-  C := Transpose(HermiteForm(Transpose(B)));
+  C := HermiteForm(B);
   return ChangeRing(C, K) * p^Valuation(C[1,1]);
 end intrinsic;
 
@@ -79,7 +76,7 @@ end intrinsic;
 
 intrinsic 'eq'(x::BTTree, y::BTTree) -> BoolElt
 { Return true if the trees are equal }
-  return x`Prime eq y`Prime;
+  return x`Field eq y`Field;
 end intrinsic;
 
 intrinsic Print(T::BTTree)
@@ -103,12 +100,12 @@ end intrinsic;
 
 intrinsic BTTVertex(tree::BTTree, expansion::RngIntElt, precision::RngIntElt) -> BTTVert
 { Create a vertex as a p-adic approximation }
-  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, 0], [expansion, Prime(tree)^precision]]));
+  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
 end intrinsic;
 
 intrinsic BTTVertex(tree::BTTree, expansion::FldPadElt, precision::RngIntElt) -> BTTVert
 { Create a vertex as a p-adic approximation }
-  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, 0], [expansion, Prime(tree)^precision]]));
+  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
 end intrinsic;
 
 intrinsic Matrix(vertex::BTTVert) -> AlgMatElt[FldPad]
@@ -131,14 +128,14 @@ intrinsic Parent(vertex::BTTVert) -> BTTree
   return vertex`Parent;
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], v::BTTVert) -> BTTVert
+intrinsic '*'(v::BTTVert, mat::AlgMatElt) -> BTTVert
 { Multiply vertex by a matrix }
-  return BTTVertexFromMatrix(Parent(v), mat*Matrix(v));
+  return BTTVertexFromMatrix(Parent(v), Matrix(v)*mat);
 end intrinsic;
 
 intrinsic Expansion(v::BTTVert) -> FldPadElt
 { Return the expansion component of v }
-  return Matrix(v)[2, 1];
+  return Matrix(v)[1, 2];
 end intrinsic;
 
 intrinsic Precision(v::BTTVert) -> RngIntElt
@@ -156,14 +153,9 @@ intrinsic Print(v::BTTVert)
   printf "Vertex %o mod p^%o", Expansion(v), Precision(v);
 end intrinsic;
 
-intrinsic DistanceToOrigin(v::BTTVert) -> RngaIntElt
-{ Return the distance of a vertex from the origin }
-  return Abs(Precision(v) - 2*Minimum(0, Valuation(Expansion(v))));
-end intrinsic;
-
 intrinsic Distance(v::BTTVert, w::BTTVert) -> RngIntElt
 { Return the distance between two vertices }
-  return DistanceToOrigin(Matrix(w)^(-1) * v);
+  return Precision(v) + Precision(w) - 2*Minimum([Valuation(Expansion(v)-Expansion(w)), Precision(v), Precision(w)]);
 end intrinsic;
 
 /**
@@ -171,7 +163,7 @@ end intrinsic;
 */
 
 intrinsic Mu(A::AlgMatElt) -> FldRatElt
-{ Return Mu(A). Roughly speaking this is how far away the origin is from being on the boundary in a 'nice' way. }
+{ Return Mu(A). Roughly speaking this is how far the characteristic polynomial of A is from being 'reduced'. }
   return Min(Valuation(Trace(A)), Valuation(Determinant(A))/2);
 end intrinsic;
 
@@ -330,37 +322,37 @@ intrinsic Print(x::BTTFixSetHoroball)
   printf "Fixed horoball bounded between %o and %o", BoundaryOnTree(x), BoundaryAtInfinity(x);
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], fix::BTTFixSetIdentity) -> BTTFixSetIdentity
+intrinsic '*'(fix::BTTFixSetIdentity, mat::AlgMatElt[FldPad]) -> BTTFixSetIdentity
 { Multiply the fixed point set by the matrix. This just returns the identity. }
   return fix;
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], fix::BTTFixSetBand) -> BTTFixSetBand
+intrinsic '*'(fix::BTTFixSetBand, mat::AlgMatElt[FldPad]) -> BTTFixSetBand
 { Multiply the fixed point set by the matrix.
 This gives the fixed point set of the conjugate of a corresponding isometry. }
   p1 := BoundaryPoints(fix)[1];
   p2 := BoundaryPoints(fix)[2];
-  return FixSetBand(Tree(fix), p1*Transpose(mat), p2*Transpose(mat), Thickness(fix));
+  return FixSetBand(Tree(fix), p1*mat, p2*mat, Thickness(fix));
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], fix::BTTFixSetBall) -> BTTFixSetBall
+intrinsic '*'(fix::BTTFixSetBall, mat::AlgMatElt[FldPad]) -> BTTFixSetBall
 { Multiply the fixed point set by the matrix.
 This gives the fixed point set of the conjugate of a corresponding isometry. }
-  return FixSetBall(Tree(fix), mat*Center(fix), Radius(fix));
+  return FixSetBall(Tree(fix), Center(fix)*mat, Radius(fix));
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], fix::BTTFixSetBallOnMidpoint) -> BTTFixSetBallOnMidpoint
+intrinsic '*'(fix::BTTFixSetBallOnMidpoint, mat::AlgMatElt[FldPad]) -> BTTFixSetBallOnMidpoint
 { Multiply the fixed point set by the matrix.
 This gives the fixed point set of the conjugate of a corresponding isometry. }
-  return FixSetBallOnMidpoint(Tree(fix), mat*Center(fix)[1], mat*Center(fix)[2], Radius(fix));
+  return FixSetBallOnMidpoint(Tree(fix), Center(fix)[1]*mat, Center(fix)[2]*mat, Radius(fix));
 end intrinsic;
 
-intrinsic '*'(mat::AlgMatElt[FldPad], fix::BTTFixSetHoroball) -> BTTFixSetHoroball
+intrinsic '*'(fix::BTTFixSetHoroball, mat::AlgMatElt[FldPad]) -> BTTFixSetHoroball
 { Multiply the fixed point set by the matrix.
 This gives the fixed point set of the conjugate of a corresponding isometry. }
   p1 := BoundaryOnTree(fix);
   p2 := BoundaryAtInfinity(fix);
-  return FixSetHoroball(Tree(fix), mat*p1, p2*Transpose(mat));
+  return FixSetHoroball(Tree(fix), p1*mat, p2*mat);
 end intrinsic;
 
 intrinsic FixSet(tree::BTTree, A::AlgMatElt) -> BTTFix
@@ -387,7 +379,6 @@ intrinsic FixSet(tree::BTTree, A::AlgMatElt) -> BTTFix
       // We need to find a point on the boundary of the fixed point set.
       // Project a vector v that is as far away from the eigenvalue as possible.
       v := Vector(K, (Valuation(eigenvectors[1][2]) gt 0) select [0, 1] else [1, 0]);
-      p := UniformizingElement(K);
       return FixSetHoroball(tree, ProjectionOntoMinTranslationSet(tree, A, v), eigenvectors[1]);
     end if;
   else
@@ -477,13 +468,12 @@ intrinsic IsometryBetweenAxes(tree::BTTree, v::ModTupFldElt[FldPad], w::ModTupFl
   K := Field(tree);
   D := Matrix(K, [[1, 0], [0, 2]]);
   error if v eq w, "v and w are scalar multiples of each other";
-  M := Transpose(Matrix(K, [v, w]));
-  return M*D*M^(-1);
+  M := Matrix(K, [v, w]);
+  return M^(-1)*D*M;
 end intrinsic;
 
 intrinsic IsometryBetweenVertices(v::BTTVert, w::BTTVert) -> SeqEnum[BTTVert]
 { Return an isometry of translation length 2 inducing a path from v to w }
-  error if Parent(v) ne Parent(w), "v and w do not have the same parent";
   tree := Parent(v);
   K := Field(tree);
   A := IsometryBetweenAxes(tree, Vector(K, [1, Expansion(v)]), Vector(K, [1, Expansion(w)]));
@@ -495,32 +485,32 @@ end intrinsic;
 
 intrinsic Path(v::BTTVert, w::BTTVert) -> SeqEnum[BTTVert]
 { Return the path between two vertices }
-  A := IsometryBetweenVertices(v, w);
-  return [A^i * v : i in [1 .. Distance(v, w)]];
+  error if Parent(v) ne Parent(w), "v and w have different parents";
+  n := Minimum([Valuation(Expansion(v) - Expansion(w)), Precision(v), Precision(w)]);
+  return [BTTVertex(Parent(v), Expansion(v), i) : i in [Precision(v)..n by -1]] cat [BTTVertex(Parent(w), Expansion(w), i) : i in [n+1..Precision(w)]];
 end intrinsic
 
 intrinsic IsInMinTranslationSet(A::AlgMatElt[FldPad], v::BTTVert) -> BoolElt
 { Return true if v is in the minimum translation set of A }
-  return Distance(v, A*v) eq TranslationLength(A);
+  return Distance(v, v*A) eq TranslationLength(A);
 end intrinsic;
 
 intrinsic IsInMinTranslationSetBoundary(A::AlgMatElt[FldPad], v::ModTupFldElt[FldPad]) -> BoolElt
 { Return true if v is in the minimum translation set of A }
-  return IsMultiple(v*Transpose(A), v);
+  return IsMultiple(v*A, v);
 end intrinsic;
 
 intrinsic ProjectionOntoMinTranslationSet(tree::BTTree, A::AlgMatElt[FldPad], v::ModTupFldElt[FldPad]) -> AlgMat[FldPad]
 { Return the projection of v on the boundary onto A }
   error if IsInMinTranslationSetBoundary(A, v), "v is in the minimum translation set of A";
-  K := Field(tree);
-  p := UniformizingElement(K);
-  B := A * p^(Integers()!(-Mu(A)));
-  w := v * Transpose(B);
-  return BTTVertexFromMatrix(tree, Transpose(Matrix([v, w])));
+  p := Prime(tree);
+  B := p^(Integers()!(-Mu(A))) * A;
+  w := v * B;
+  return BTTVertexFromMatrix(tree, Matrix([v, w]));
 end intrinsic
 
 intrinsic Midpoint(tree::BTTree, u::ModTupFldElt[FldPad], v::ModTupFldElt[FldPad], w::ModTupFldElt[FldPad]) -> BTTVertex
 { Return the midpoint between 3 points on the boundary of the tree }
   V := KernelMatrix(Matrix([u, v, w]))[1];
-  return BTTVertexFromMatrix(tree, Transpose(Matrix(V[1] * u, V[2] * v)));
+  return BTTVertexFromMatrix(tree, Matrix([u * V[1], v * V[2]]));
 end intrinsic
