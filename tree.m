@@ -409,7 +409,9 @@ intrinsic TranslationAxisBoundary(A::AlgMatElt[FldPad]) -> Tup
   error if not IsHyperbolic(A), "A is not hyperbolic";
   K := BaseRing(A);
   roots := Roots(CharacteristicPolynomial(A));
-  return <Vector(K, [1, roots[1][1]]), Vector(K, [1, roots[2][1]])>;
+  eig1 := EchelonBasis(Eigenspace(A, roots[1][1]))[1];
+  eig2 := EchelonBasis(Eigenspace(A, roots[2][1]))[1];
+  return <eig1, eig2>;
 end intrinsic
 
 intrinsic CrossRatio(a::ModTupFldElt[FldPad], b::ModTupFldElt[FldPad], c::ModTupFldElt[FldPad], d::ModTupFldElt[FldPad]) -> FldPadElt
@@ -425,7 +427,7 @@ Otherwise, returns the distance between the axes }
   cross1 := Valuation(CrossRatio(points1[1], points1[2], points2[1], points2[2]));
   cross2 := Valuation(CrossRatio(points1[2], points1[1], points2[1], points2[2]));
 
-  m := Maximum(cross1, cross2);
+  m := Maximum(Abs(cross1), Abs(cross2));
 
   if (cross1 eq cross2) then
     if (cross1 eq 0) then
@@ -468,8 +470,8 @@ intrinsic IsometryBetweenAxes(tree::BTTree, v::ModTupFldElt[FldPad], w::ModTupFl
   K := Field(tree);
   D := Matrix(K, [[1, 0], [0, 2]]);
   error if v eq w, "v and w are scalar multiples of each other";
-  M := Matrix(K, [v, w]);
-  return M^(-1)*D*M;
+  M := Matrix([v, w]);
+  return M*D*M^(-1);
 end intrinsic;
 
 intrinsic IsometryBetweenVertices(v::BTTVert, w::BTTVert) -> SeqEnum[BTTVert]
