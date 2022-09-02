@@ -69,6 +69,11 @@ intrinsic Prime(tree::BTTree) -> RngIntElt
   return UniformizingElement(Field(tree));
 end intrinsic;
 
+intrinsic Uniformizer(tree::BTTree) -> RngIntElt
+{ Get a uniformizer of the tree }
+  return UniformizingElement(Field(tree));
+end intrinsic;
+
 intrinsic Origin(tree::BTTree) -> BTTVert
 { Get the origin of the tree corresponding to the identity matrix }
   return BTTVertex(tree, 0, 0);
@@ -123,9 +128,29 @@ intrinsic Prime(vertex::BTTVert) -> RngIntElt
   return Prime(Parent(vertex));
 end intrinsic;
 
+intrinsic Uniformizer(vertex::BTTVert) -> RngIntElt
+{ Return the prime used for the valuation }
+  return Prime(Parent(vertex));
+end intrinsic;
+
 intrinsic Parent(vertex::BTTVert) -> BTTree
 { Get the Bruhat-Tits tree containing a vertex }
   return vertex`Parent;
+end intrinsic;
+
+intrinsic IsCoercible(T::BTTree, v::BTTVert) -> BoolElt, .
+{ Return true if v is coercible to parent T with the conversion, otherwise return false }
+  if T eq Parent(v) then
+    return true, v;
+  end if;
+  F := Field(T);
+  G := Field(v);
+  b, u := IsCoercible(Expansion(v), G);
+  if b then
+    return true, BTTVertex(T, u, Precision(v));
+  else
+    return false;
+  end if;
 end intrinsic;
 
 intrinsic '*'(v::BTTVert, mat::AlgMatElt) -> BTTVert
@@ -156,6 +181,55 @@ end intrinsic;
 intrinsic Distance(v::BTTVert, w::BTTVert) -> RngIntElt
 { Return the distance between two vertices }
   return Precision(v) + Precision(w) - 2*Minimum([Valuation(Expansion(v)-Expansion(w)), Precision(v), Precision(w)]);
+end intrinsic;
+
+intrinsic Neighbor(v::BTTVert, x::ModTupFldElt[FldFin]) -> BTTVert
+{ Return the neighbor w of v such that x is in the subspace v/w of k^2, where k is the residue field }
+  error if IsZero(x), "Vector is zero";
+  if x[1] eq 0 then
+    return Neighbor(v, Infinity(x));
+  else
+    return Neighbor(v, x[2]/x[1]);
+  end if;
+end intrinsic;
+
+intrinsic Neighbor(v::BTTVert, x::FldElt) -> BTTVert
+{ Return the neighbor w of v such that [1, x] is in the subspace v/w of k^2, where k is the residue field }
+  return BTTVertex(Parent(v), Expansion(v)+Field(v)!(x)*Prime(v)^Precision(v), Precision(v) + 1);
+end intrinsic;
+
+intrinsic Neighbor(v::BTTVert, x::RngElt) -> BTTVert
+{ Return the neighbor w of v such that [1, x] is in the subspace v/w of k^2, where k is the residue field }
+  return BTTVertex(Parent(v), Expansion(v)+Field(v)!(x)*Prime(v)^Precision(v), Precision(v) + 1);
+end intrinsic;
+
+intrinsic Neighbor(v::BTTVert, x::Infty) -> BTTVert
+{ Return the neighbor w of v such that [0, 1] is in the subspace v/w of k^2, where k is the residue field }
+  return BTTVertex(Parent(v), Expansion(v), Precision(v) - 1);
+end intrinsic;
+
+intrinsic TypeOfNeighbor(v::BTTVert, w::BTTVert) -> ModTupFldElt[FldFin]
+{ Given neighbouring vertices v and w, reduced the vertex in v/w in Echelon form
+  (ie. [1, u] or [0, 1], where u is in the residue field) }
+  F := Field(v);
+  p := Prime(v);
+  k, m := ResidueClassField(Integers(Field(v)));
+  V := VectorSpace(k, 2);
+  if Precision(w) eq Precision(v) - 1 and Valuation(Expansion(v) - Expansion(w)) ge Precision(w) then
+    return V![0, 1];
+  else
+    dif := Expansion(v) - Expansion(w);
+    if Precision(w) eq Precision(v) + 1 and Valuation(dif) ge Precision(v) then
+      return V![1, m(dif*Prime(v)^(-Precision(v)))];
+    end if;
+    error "w is not a neighbor of v";
+  end if;
+end intrinsic;
+
+intrinsic Neighbors(v::BTTVert) -> SeqEnum[BTTVert]
+{ Return the neighbours of v }
+  k := ResidueClassField(Integers(Field(v)));
+  return [Neighbor(v, x) : x in k] cat [Neighbor(v, Infinity())];
 end intrinsic;
 
 /**
@@ -420,7 +494,8 @@ intrinsic CrossRatio(a::ModTupFldElt[FldPad], b::ModTupFldElt[FldPad], c::ModTup
 end intrinsic;
 
 intrinsic Intersects(A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> BoolElt, RngIntElt
-{ Return whether the axes of the isometries determined by the matrices intersect. If so, returns the size of the path of the intersection.
+{ Return whether the axes of the hyperbolic isometries determined by the matrices intersect.
+If so, returns the size of the path of the intersection.
 Otherwise, returns the distance between the axes }
   points1 := TranslationAxisBoundary(A);
   points2 := TranslationAxisBoundary(B);
@@ -442,7 +517,7 @@ end intrinsic;
 
 intrinsic CrossPath(tree::BTTree, A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> BoolElt, Tup
 { If the translation axes of A and B overlap, returns true and the endpoints of the overlapping path.
-Otherwise, returns false and the endpoints of the minimal path between the axes.}
+Otherwise, returns false and the endpoints of the minimal path between the axes. }
   points1 := TranslationAxisBoundary(A);
   points2 := TranslationAxisBoundary(B);
   a := points1[1];
@@ -464,18 +539,18 @@ end intrinsic;
 */
 
 intrinsic IsometryBetweenAxes(tree::BTTree, v::ModTupFldElt[FldPad], w::ModTupFldElt[FldPad]) -> AlgMatElt[FldPad]
-{ Return an isometry of translation length 2 inducing a path from v to w }
+{ Return an isometry of translation length 1 inducing a path from v to w }
   v := EchelonForm(v);
   w := EchelonForm(w);
   K := Field(tree);
   D := Matrix(K, [[1, 0], [0, 2]]);
   error if v eq w, "v and w are scalar multiples of each other";
   M := Matrix([v, w]);
-  return M*D*M^(-1);
+  return M^(-1)*D*M;
 end intrinsic;
 
 intrinsic IsometryBetweenVertices(v::BTTVert, w::BTTVert) -> SeqEnum[BTTVert]
-{ Return an isometry of translation length 2 inducing a path from v to w }
+{ Return an isometry of translation length 1 inducing a path from v to w }
   tree := Parent(v);
   K := Field(tree);
   A := IsometryBetweenAxes(tree, Vector(K, [1, Expansion(v)]), Vector(K, [1, Expansion(w)]));
