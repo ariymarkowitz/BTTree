@@ -38,14 +38,27 @@ intrinsic VertexNormalForm(A::AlgMatElt[FldPad]) -> AlgMatElt[FldPad]
   return ChangeRing(C, K) * p^Valuation(C[1,1]);
 end intrinsic;
 
-declare type BTTree[BTTVert];
-declare attributes BTTree: Field;
-declare attributes BTTVert: Parent;
-declare attributes BTTVert: Matrix;
+intrinsic IsApproximatelyEqual(A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> BoolElt
+{ Return true if A and B are equal, with different precisions }
+  for i in [1..Rows(A)] do
+    for j in [1..Columns(A)] do
+      if not IsZero(A[i][j] - B[i][j]) then
+        return false;
+      end if;
+    end for;
+  end for;
+  return true;
+end intrinsic;
 
 /**
 * Bruhat-Tits tree
 */
+
+declare type BTTree[BTTVert];
+declare attributes BTTree: Field;
+declare attributes BTTVert: Parent;
+declare attributes BTTVert: Expansion;
+declare attributes BTTVert: Precision;
 
 intrinsic BruhatTitsTree(field::FldPad) -> BTTree
 { Create a Bruhat-Tits tree from a p-adic field }
@@ -99,7 +112,8 @@ intrinsic BTTVertexFromMatrix(tree::BTTree, matrix::AlgMatElt[FldPad]) -> BTTVer
   v`Parent := tree;
   mat := VertexNormalForm(matrix);
   error if mat[2][2] eq 0, "Matrix is singular";
-  v`Matrix := VertexNormalForm(matrix);
+  v`Expansion := mat[1][2];
+  v`Precision := Valuation(mat[2][2]);
   return v;
 end intrinsic;
 
@@ -113,9 +127,9 @@ intrinsic BTTVertex(tree::BTTree, expansion::FldPadElt, precision::RngIntElt) ->
   return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
 end intrinsic;
 
-intrinsic Matrix(vertex::BTTVert) -> AlgMatElt[FldPad]
+intrinsic Matrix(v::BTTVert) -> AlgMatElt[FldPad]
 { Convert a vertex to a matrix in vertex normal form }
-  return vertex`Matrix;
+  return Matrix(Field(v), [[1, v`Expansion], [0, Prime(v)^(v`Precision)]]);
 end intrinsic;
 
 intrinsic Field(vertex::BTTVert) -> FldPad
@@ -160,17 +174,17 @@ end intrinsic;
 
 intrinsic Expansion(v::BTTVert) -> FldPadElt
 { Return the expansion component of v }
-  return Matrix(v)[1, 2];
+  return v`Expansion;
 end intrinsic;
 
 intrinsic Precision(v::BTTVert) -> RngIntElt
 { Return the precision component of v }
-  return Valuation(Matrix(v)[2, 2]);
+  return v`Precision;
 end intrinsic;
 
 intrinsic 'eq'(x::BTTVert, y::BTTVert) -> BoolElt
 { Return true if the vertices are equal }
-  return x`Parent eq y`Parent and x`Matrix eq y`Matrix;
+  return x`Parent eq y`Parent and IsZero(x`Expansion - y`Expansion) and x`Precision eq y`Precision;
 end intrinsic;
 
 intrinsic Print(v::BTTVert)
