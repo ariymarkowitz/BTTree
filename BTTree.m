@@ -35,7 +35,7 @@ intrinsic VertexNormalForm(A::AlgMatElt[FldPad]) -> AlgMatElt[FldPad]
   n := MinValuation(A);
   B := ChangeRing(A * p^(-n), Integers(K));
   C := HermiteForm(B);
-  return ChangeRing(C, K) * p^Valuation(C[1,1]);
+  return ChangeRing(C, K) * p^(-Valuation(C[1,1]));
 end intrinsic;
 
 intrinsic IsApproximatelyEqual(A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> BoolElt
@@ -106,7 +106,22 @@ end intrinsic;
 * Bruhat-Tits tree vertex
 */
 
-intrinsic BTTVertexFromMatrix(tree::BTTree, matrix::AlgMatElt[FldPad]) -> BTTVert
+intrinsic BTTVertex(tree::BTTree, expansion::FldPadElt, precision::RngIntElt) -> BTTVert
+{ Create a vertex as a p-adic approximation }
+  return BTTVertex(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
+end intrinsic;
+
+intrinsic BTTVertex(tree::BTTree, expansion::RngPadElt, precision::RngIntElt) -> BTTVert
+{ Create a vertex as a p-adic approximation }
+  return BTTVertex(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
+end intrinsic;
+
+intrinsic BTTVertex(tree::BTTree, expansion::RngIntElt, precision::RngIntElt) -> BTTVert
+{ Create a vertex as a p-adic approximation }
+  return BTTVertex(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
+end intrinsic;
+
+intrinsic BTTVertex(tree::BTTree, matrix::AlgMatElt[FldPad]) -> BTTVert
 { Convert a matrix to a Bruhat-Tits tree vertex }
   v := New(BTTVert);
   v`Parent := tree;
@@ -115,16 +130,6 @@ intrinsic BTTVertexFromMatrix(tree::BTTree, matrix::AlgMatElt[FldPad]) -> BTTVer
   v`Expansion := mat[1][2];
   v`Precision := Valuation(mat[2][2]);
   return v;
-end intrinsic;
-
-intrinsic BTTVertex(tree::BTTree, expansion::RngIntElt, precision::RngIntElt) -> BTTVert
-{ Create a vertex as a p-adic approximation }
-  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
-end intrinsic;
-
-intrinsic BTTVertex(tree::BTTree, expansion::FldPadElt, precision::RngIntElt) -> BTTVert
-{ Create a vertex as a p-adic approximation }
-  return BTTVertexFromMatrix(tree, Matrix(Field(tree), [[1, expansion], [0, Prime(tree)^precision]]));
 end intrinsic;
 
 intrinsic Matrix(v::BTTVert) -> AlgMatElt[FldPad]
@@ -169,7 +174,7 @@ end intrinsic;
 
 intrinsic '*'(v::BTTVert, mat::AlgMatElt) -> BTTVert
 { Multiply vertex by a matrix }
-  return BTTVertexFromMatrix(Parent(v), Matrix(v)*mat);
+  return BTTVertex(Parent(v), Matrix(v)*mat);
 end intrinsic;
 
 intrinsic Expansion(v::BTTVert) -> FldPadElt
@@ -597,11 +602,11 @@ intrinsic ProjectionOntoMinTranslationSet(tree::BTTree, A::AlgMatElt[FldPad], v:
   p := Prime(tree);
   B := p^(Integers()!(-Mu(A))) * A;
   w := v * B;
-  return BTTVertexFromMatrix(tree, Matrix([v, w]));
+  return BTTVertex(tree, Matrix([v, w]));
 end intrinsic
 
 intrinsic Midpoint(tree::BTTree, u::ModTupFldElt[FldPad], v::ModTupFldElt[FldPad], w::ModTupFldElt[FldPad]) -> BTTVertex
 { Return the midpoint between 3 points on the boundary of the tree }
   V := KernelMatrix(Matrix([u, v, w]))[1];
-  return BTTVertexFromMatrix(tree, Matrix([u * V[1], v * V[2]]));
+  return BTTVertex(tree, Matrix([u * V[1], v * V[2]]));
 end intrinsic

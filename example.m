@@ -6,7 +6,7 @@ M := MatrixAlgebra(Qp, 2);
 tree := BruhatTitsTree(Qp);
 print Origin(tree);
 
-v := BTTVertexFromMatrix(tree, M ! [1, 2, 3, 22]);
+v := BTTVertex(tree, M ! [1, 2, 3, 22]);
 print v;
 print Distance(v, Origin(tree));
 print Matrix(v);
