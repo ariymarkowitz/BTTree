@@ -549,7 +549,7 @@ Otherwise, returns false and the endpoints of the minimal path between the axes.
     bProj := Midpoint(tree, b, c, d);
     return true, <aProj, bProj>;
   else
-    return false, <aProj, cProj>;
+    return false, <cProj, aProj>;
   end if;
 end intrinsic;
 
