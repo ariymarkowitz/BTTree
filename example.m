@@ -19,6 +19,7 @@ print v*A;
 print TranslationLength(A);
 print Distance(v, v*A^2);
 print Path(v, v*A^2);
+print IsHyperbolic(A);
 print TranslationAxisBoundary(A);
 w := ProjectionOntoMinTranslationSet(tree, A, Vector(Qp, [1, 9]));
 print w;

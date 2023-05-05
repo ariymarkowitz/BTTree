@@ -50,6 +50,11 @@ intrinsic IsApproximatelyEqual(A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> Bo
   return true;
 end intrinsic;
 
+intrinsic IsApproximatelyIdentity(A::AlgMatElt[FldPad]) -> BoolElt
+{ Return true if A is the identity matrix, up to known precision }
+  return IsZero(A[1][2]) and IsZero(A[2][1]) and IsZero(A[1][1] - A[2][2]);
+end intrinsic;
+
 /**
 * Bruhat-Tits tree
 */
