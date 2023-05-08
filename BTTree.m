@@ -615,3 +615,33 @@ intrinsic Midpoint(tree::BTTree, u::ModTupFldElt[FldPad], v::ModTupFldElt[FldPad
   V := KernelMatrix(Matrix([u, v, w]))[1];
   return BTTVertex(tree, Matrix([u * V[1], v * V[2]]));
 end intrinsic
+
+intrinsic Degree(tree:BTTree) -> RngIntElt
+{ Return the degree of the tree. }
+  return #ResidueClassField(Integers(Field(tree))) + 1;
+end intrinsic
+
+intrinsic Random(tree::BTTree, radius::RngIntElt) -> BTTVert
+{ Return a random vertex of the tree with a maximum radius r }
+  n := Degree(tree);
+  v := Origin(tree);
+  nverts := 1 + n*((n-1)^radius - 1) div (n - 2);
+  left := nverts;
+  current := 1;
+  for i in [1 .. radius] do
+    if Random(1,left) le current then
+      return v;
+    end if;
+    if Expansion(v) eq 0 and Precision(v) lt 0 then
+      children := Neighbors(v);
+    elif Expansion(v) eq 0 and Precision eq 0 then
+      children := [w : w in Neighbors(v) | TypeOfNeighbor(v, w)[2] ne 0];
+    else
+      children := [w : w in Neighbors(v) | TypeOfNeighbor(v, w)[1] ne 0];
+    end if;
+    v := Random(children);
+    left -:= current;
+    current := n*(n-1)^(i-1);
+  end for;
+  return v;
+end intrinsic;
