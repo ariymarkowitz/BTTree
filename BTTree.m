@@ -1,5 +1,5 @@
 /**
-* Utilities
+* Functions for working with the Bruhat-Tits tree.
 */
 
 intrinsic EchelonBasis(V::ModTupRng) -> Tup
@@ -93,7 +93,7 @@ intrinsic Uniformizer(tree::BTTree) -> RngIntElt
 end intrinsic;
 
 intrinsic Origin(tree::BTTree) -> BTTVert
-{ Get the origin of the tree corresponding to the identity matrix }
+{ Get the 'origin' of the tree, that is the vertex corresponding to the identity matrix }
   return BTTVertex(tree, 0, 0);
 end intrinsic;
 
@@ -143,7 +143,7 @@ intrinsic Matrix(v::BTTVert) -> AlgMatElt[FldPad]
 end intrinsic;
 
 intrinsic Field(vertex::BTTVert) -> FldPad
-{ Get the underlying field of a vertex }
+{ Return the underlying field of a vertex }
   return Field(Parent(vertex));
 end intrinsic;
 
@@ -158,7 +158,7 @@ intrinsic Uniformizer(vertex::BTTVert) -> RngIntElt
 end intrinsic;
 
 intrinsic Parent(vertex::BTTVert) -> BTTree
-{ Get the Bruhat-Tits tree containing a vertex }
+{ Return the Bruhat-Tits tree containing the vertex }
   return vertex`Parent;
 end intrinsic;
 
@@ -233,7 +233,7 @@ intrinsic Neighbor(v::BTTVert, x::Infty) -> BTTVert
 end intrinsic;
 
 intrinsic TypeOfNeighbor(v::BTTVert, w::BTTVert) -> ModTupFldElt[FldFin]
-{ Given neighbouring vertices v and w, reduced the vertex in v/w in Echelon form
+{ Given neighbouring vertices v and w, give v/w (as a rank 2 vector over the residue field) in Echelon form
   (ie. [1, u] or [0, 1], where u is in the residue field) }
   F := Field(v);
   p := Prime(v);
@@ -519,8 +519,8 @@ end intrinsic;
 
 intrinsic Intersects(A::AlgMatElt[FldPad], B::AlgMatElt[FldPad]) -> BoolElt, RngIntElt
 { Return whether the axes of the hyperbolic isometries determined by the matrices intersect.
-If so, returns the size of the path of the intersection.
-Otherwise, returns the distance between the axes }
+If so, then return the size of the path of the intersection.
+Otherwise return the distance between the axes }
   points1 := TranslationAxisBoundary(A);
   points2 := TranslationAxisBoundary(B);
   cross1 := Valuation(CrossRatio(points1[1], points1[2], points2[1], points2[2]));
@@ -602,7 +602,7 @@ intrinsic IsInMinTranslationSetBoundary(A::AlgMatElt[FldPad], v::ModTupFldElt[Fl
 end intrinsic;
 
 intrinsic ProjectionOntoMinTranslationSet(tree::BTTree, A::AlgMatElt[FldPad], v::ModTupFldElt[FldPad]) -> AlgMat[FldPad]
-{ Return the projection of v on the boundary onto A }
+{ Return the projection of v on the boundary onto the minimum translation set of A }
   error if IsInMinTranslationSetBoundary(A, v), "v is in the minimum translation set of A";
   p := Prime(tree);
   B := p^(Integers()!(-Mu(A))) * A;
@@ -621,15 +621,18 @@ intrinsic Degree(tree:BTTree) -> RngIntElt
   return #ResidueClassField(Integers(Field(tree))) + 1;
 end intrinsic
 
-intrinsic Random(tree::BTTree, radius::RngIntElt) -> BTTVert
-{ Return a random vertex of the tree with a maximum radius r }
+intrinsic Random(tree::BTTree, radius::RngIntElt : boundary := false) -> BTTVert
+{ Return a random vertex of the tree with a maximum radius r.
+If `boundary` = true, return a random vertex with radius exactly r. }
   n := Degree(tree);
   v := Origin(tree);
-  nverts := 1 + n*((n-1)^radius - 1) div (n - 2);
-  left := nverts;
-  current := 1;
+  if not boundary then
+    nverts := 1 + n*((n-1)^radius - 1) div (n - 2);
+    left := nverts;
+    current := 1;
+  end if;
   for i in [1 .. radius] do
-    if Random(1,left) le current then
+    if (boundary and i-1 eq radius) or (not boundary and Random(1,left) le current) then
       return v;
     end if;
     if Expansion(v) eq 0 and Precision(v) lt 0 then
@@ -640,8 +643,10 @@ intrinsic Random(tree::BTTree, radius::RngIntElt) -> BTTVert
       children := [w : w in Neighbors(v) | TypeOfNeighbor(v, w)[1] ne 0];
     end if;
     v := Random(children);
-    left -:= current;
-    current := n*(n-1)^(i-1);
+    if not boundary then
+      left -:= current;
+      current := n*(n-1)^(i-1);
+    end if;
   end for;
   return v;
 end intrinsic;

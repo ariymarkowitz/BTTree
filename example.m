@@ -3,18 +3,25 @@ Attach("BTTree.m");
 Qp := pAdicField(2, 20);
 M := MatrixAlgebra(Qp, 2);
 
+// Create the Bruhat-Tits tree over the 2-adic field.
 tree := BruhatTitsTree(Qp);
 print Origin(tree);
 
+// Create a vertex of the tree corresponding to the matrix [1 2; 3 22].
 v := BTTVertex(tree, M ! [1, 2, 3, 22]);
 print v;
+// Get the distance between two vertices.
 print Distance(v, Origin(tree));
+// Get the standard form matrix corresponding to `v`.
 print Matrix(v);
+// Get the vertices neighbouring `v`.
 n := Neighbors(v);
 print n;
+// Get the quotient v/w as a representative vector over the residue field.
 print TypeOfNeighbor(v, n[1]);
 
 A := M ! [2, 0, 1, 3];
+// Apply an isometry to a vertex.
 print v*A;
 print TranslationLength(A);
 print Distance(v, v*A^2);
