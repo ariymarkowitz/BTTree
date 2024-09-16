@@ -40,7 +40,7 @@ Get a uniformizer of the tree.
 
 `Origin(tree::BTTree) -> BTTVert`
 
-Get the 'origin' of the tree, that is the vertex corresponding to the identity matrix
+Get the 'origin' of the tree, that is the vertex corresponding to the identity matrix.
 
 `Degree(tree:BTTree) -> RngIntElt`
 
@@ -84,16 +84,16 @@ Return the distance between two vertices.
 
 `Neighbor(v::BTTVert, x::RngElt) -> BTTVert`
 
-Return the neighbor w of v such that [1, x] is in the subspace v/w of k^2, where k is the residue field.
+Return the neighbor w of v such that \[1, x\] is in the subspace v/w of k^2, where k is the residue field.
 
 `Neighbor(v::BTTVert, x::Infty) -> BTTVert`
 
-Return the neighbor w of v such that [0, 1] is in the subspace v/w of k^2, where k is the residue field
+Return the neighbor w of v such that \[0, 1\] is in the subspace v/w of k^2, where k is the residue field.
 
 `TypeOfNeighbor(v::BTTVert, w::BTTVert) -> ModTupFldElt[FldFin]`
 
 Given neighbouring vertices v and w, give v/w (as a rank 2 vector over the residue field) in Echelon form
-  (ie. [1, u] or [0, 1], where u is in the residue field).
+  (ie. \[1, u\] or \[0, 1\], where u is in the residue field).
 
 Return the neighbours of v.
 
@@ -157,7 +157,8 @@ The types of fixed points set are:
 - `BTTFixSetIdentity` - The entire tree.
 - `BTTFixSetBall` - A ball centred at a vertex.
 - `BTTFixSetBallOnMidpoint` - A ball centered at the midpoint of an edge.
-- `BTTFixSetHoroball`
+- `BTTFixSetHoroball` - A horoball containing a unique point at infinity.
+- `BTTFixSetBand` - A union of balls of constant radius centered on a bi-infinite line.
 
 `Center(fix::BTTFixSetBall) -> Tup`
 
